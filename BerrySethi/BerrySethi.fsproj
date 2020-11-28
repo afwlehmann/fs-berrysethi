@@ -11,6 +11,5 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="FParsec" Version="1.1.1" />
-    <PackageReference Include="xunit" Version="2.4.1" />
   </ItemGroup>
 </Project>
