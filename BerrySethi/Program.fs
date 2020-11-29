@@ -14,4 +14,8 @@ let main argv =
             | Failure (msg, _, _) -> failwith msg
 
         if input |> Seq.toList |> nfa.Accept then 0 else 1
-    | _ -> failwith "Usage: foo <regex> <input>"
+    | _ ->
+        let basename =
+            System.Diagnostics.Process.GetCurrentProcess().ProcessName
+
+        failwith <| sprintf "Usage: %s <regex> <input>" basename
