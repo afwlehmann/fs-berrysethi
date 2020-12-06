@@ -78,20 +78,18 @@ let toNFA<'a when 'a: comparison> root =
         Set.union (last root) (if empty root then Set.singleton Root else Set.empty)
 
     let transitions =
-        let foo: seq<(Lf<'a> * 'a) * Set<Lf<'a>>> =
+        let fromRoot: seq<Lf<'a> * 'a * Lf<'a>> =
             first root
-            |> Seq.map (fun (Lf (_, s) as self) -> ((Root, s), self))
-            |> Seq.groupBy (fun (key, _) -> key)
-            |> Seq.map (fun (key, value) -> (key, value |> Seq.map (fun (_, node) -> node) |> Set.ofSeq))
+            |> Seq.map (fun (Lf (_, input) as target) -> (Root, input, target))
 
-        let bar: seq<(Lf<'a> * 'a) * Set<Lf<'a>>> =
+        let fromLeaves: seq<Lf<'a> * 'a * Lf<'a>> =
             leaves
-            |> Seq.map (fun l -> (l, next root l))
-            |> Seq.collect (fun ((Leaf lf as l), targets) ->
-                targets |> Seq.map (fun (Lf (_, s) as self) -> ((lf, s), self)))
-            |> Seq.groupBy (fun (key, _) -> key)
-            |> Seq.map (fun (key, value) -> (key, value |> Seq.map (fun (_, node) -> node) |> Set.ofSeq))
+            |> Seq.map (fun (Leaf (Lf _ as lf) as source) -> (lf, next root source))
+            |> Seq.collect (fun (source, targets) -> targets |> Seq.map (fun (Lf (_, s) as target) -> (source, s, target)))
 
-        Seq.append foo bar |> Map.ofSeq
+        Seq.append fromRoot fromLeaves
+            |> Seq.groupBy (fun (source, input, _) -> (source, input))
+            |> Seq.map (fun (key, targets) -> (key, targets |> Seq.map (fun (_, _, target) -> target) |> Set.ofSeq))
+            |> Map.ofSeq
 
     NFA(transitions, Root, finalStates)
