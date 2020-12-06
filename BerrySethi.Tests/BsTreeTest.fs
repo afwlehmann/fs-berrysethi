@@ -68,12 +68,13 @@ type BsTreeProps() =
 
     [<Property>]
     member x.``empty yields the correct result``(root: BsTree<char>) =
-        empty root =
-            match root with
-            | Leaf _ -> false
-            | Concat (l, r) -> empty l && empty r
-            | Or (l, r) -> empty l || empty r
-            | _ -> true
+        Assert.Equal
+            (empty root,
+             match root with
+             | Leaf _ -> false
+             | Concat (l, r) -> empty l && empty r
+             | Or (l, r) -> empty l || empty r
+             | _ -> true)
 
     [<Theory>]
     [<InlineData("aa")>]
@@ -82,7 +83,7 @@ type BsTreeProps() =
     [<InlineData("abb")>]
     [<InlineData("bab")>]
     [<InlineData("babb")>]
-    member x.``toNFA builds an NFA that accepts the corresponding regular expression``(input: string) =
+    member x.``toNFA builds an NFA that accepts the language of the corresponding regular expression``(input: string) =
         // (a|b)*a(a|b)b?
         let nfa = toNFA exampleTree
         input |> Seq.toList |> nfa.Accept |> Assert.True

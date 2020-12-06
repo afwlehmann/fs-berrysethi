@@ -10,6 +10,8 @@ type NFA<'State, 'T when 'State: comparison and 'T: comparison>(Delta: Map<'Stat
     let F = F
     let q0 = q0
 
+    // TODO: Check that there is no non-final state without outbound transitions
+
     member x.Accept input =
         let rec go q =
             function
@@ -22,29 +24,34 @@ type NFA<'State, 'T when 'State: comparison and 'T: comparison>(Delta: Map<'Stat
 
         go q0 input
 
-    member x.Generate =
+    member x.Generate() =
         let rnd = Random()
 
-        let transitionsFrom state =
+        let transitionsByState: Map<'State, ('T * 'State) []> =
             Map.toSeq Delta
-            |> Seq.filter (fun ((from, _), _) -> from = state)
-            |> Seq.collect (fun (k, targetStates) -> targetStates |> Seq.map (fun state -> (k, state)))
-            |> Seq.toList
+            |> Seq.map (fun ((source, input), targets) -> source, input, targets)
+            |> Seq.groupBy (fun (s, _, _) -> s)
+            |> Map.ofSeq
+            |> Map.map (fun _ vs ->
+                vs
+                |> Seq.collect (fun (_, input, ts) -> ts |> Seq.map (fun t -> input, t))
+                |> Seq.toArray)
 
         let randomTransition q =
-            let transitions = transitionsFrom q
-            if transitions.IsEmpty then
-                None
-            else
-                let index = rnd.Next(transitions.Length)
-                Some transitions.[index]
+            transitionsByState.TryFind q
+            |> Option.filter (not << Array.isEmpty)
+            |> Option.map (fun ts ->
+                let index = rnd.Next(ts.Length)
+                ts.[index])
 
         let rec go acc q =
-            if F.Contains(q) && rnd.Next(2) = 1 then
-                acc
+            if F.Contains(q) && rnd.Next(2) = 1
+            then acc
             else
                 match randomTransition q with
-                | Some ((_, sigma), q') -> go (sigma :: acc) q'
-                | None -> assert F.Contains(q); acc
+                | Some (sigma, q') -> go (sigma :: acc) q'
+                | None ->
+                    assert F.Contains(q)
+                    acc
 
-        go [] q0 |> String.Concat
+        go [] q0 |> List.rev |> String.Concat

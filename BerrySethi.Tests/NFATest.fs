@@ -1,10 +1,13 @@
 module ``BerrySethi NFA Tests``
 
+open FsCheck.Xunit
 open Xunit
+open FsCheck
+open System.Text.RegularExpressions
+
 open BerrySethi.NFA
 
 type NFAProps() =
-    // (0|1)*1(0|1){3}
     let exampleNFA =
         let Delta =
             Map.ofList [ (("q0", '0'), set [ "q0" ])
@@ -19,8 +22,7 @@ type NFAProps() =
         NFA(Delta, "q0", Set.singleton "q4")
 
     let validInputs =
-        [ "1111"; "01111"; "11111" ]
-        |> List.map Seq.toList
+        [ "1111"; "01111"; "11111" ] |> List.map Seq.toList
 
     [<Fact>]
     let ``NFA accepts valid input`` () =
@@ -29,9 +31,15 @@ type NFAProps() =
         |> Seq.map exampleNFA.Accept
         |> Seq.iter Assert.True
 
-    [<Fact>]
-    let ``NFA rejects invalid input`` () =
-        [ ""; "11x11"; "01121"; "1111ya1" ]
-        |> Seq.map Seq.toList
-        |> Seq.map exampleNFA.Accept
-        |> Seq.iter Assert.False
+    [<Theory>]
+    [<InlineData("")>]
+    [<InlineData("11x11")>]
+    [<InlineData("01121")>]
+    [<InlineData("1111ya1")>]
+    let ``NFA rejects invalid input`` (input: string) =
+        input |> Seq.toList |> exampleNFA.Accept |> Assert.False
+
+    [<Property>]
+    let ``NFA generates sequences matching a regex for the same language`` () =
+        Prop.forAll (Arb.fromGen <| gen { return exampleNFA.Generate() }) (fun generated ->
+            Regex.IsMatch(generated, "(0|1)*1(0|1){3}"))

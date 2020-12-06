@@ -1,6 +1,6 @@
-open BerrySethi
-
 open FParsec
+
+open BerrySethi
 
 [<EntryPoint>]
 let main argv =
